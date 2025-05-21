@@ -1,76 +1,47 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Quote, RefreshCw } from "lucide-react"
-
-// Sample data of quotes and public figures
-const quotes = [
-  {
-    id: 1,
-    text: "The greatest glory in living lies not in never falling, but in rising every time we fall.",
-    author: "Nelson Mandela",
-    image: "/placeholder.svg?height=400&width=400",
-  },
-  {
-    id: 2,
-    text: "The way to get started is to quit talking and begin doing.",
-    author: "Walt Disney",
-    image: "/placeholder.svg?height=400&width=400",
-  },
-  {
-    id: 3,
-    text: "Your time is limited, so don't waste it living someone else's life.",
-    author: "Steve Jobs",
-    image: "/placeholder.svg?height=400&width=400",
-  },
-  {
-    id: 4,
-    text: "If life were predictable it would cease to be life, and be without flavor.",
-    author: "Eleanor Roosevelt",
-    image: "/placeholder.svg?height=400&width=400",
-  },
-  {
-    id: 5,
-    text: "If you look at what you have in life, you'll always have more. If you look at what you don't have in life, you'll never have enough.",
-    author: "Oprah Winfrey",
-    image: "/placeholder.svg?height=400&width=400",
-  },
-  {
-    id: 6,
-    text: "Spread love everywhere you go. Let no one ever come to you without leaving happier.",
-    author: "Mother Teresa",
-    image: "/placeholder.svg?height=400&width=400",
-  },
-  {
-    id: 7,
-    text: "The future belongs to those who believe in the beauty of their dreams.",
-    author: "Eleanor Roosevelt",
-    image: "/placeholder.svg?height=400&width=400",
-  },
-  {
-    id: 8,
-    text: "It is during our darkest moments that we must focus to see the light.",
-    author: "Aristotle",
-    image: "/placeholder.svg?height=400&width=400",
-  },
-]
+import { getRandomQuote, type QuoteData } from "./actions"
 
 export default function QuoteGenerator() {
-  const [currentQuote, setCurrentQuote] = useState(quotes[0])
-  const [isLoading, setIsLoading] = useState(false)
+  const [quote, setQuote] = useState<QuoteData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUsingFallback, setIsUsingFallback] = useState(false)
 
-  const generateRandomQuote = () => {
+  // Function to fetch a random quote using the server action
+  const fetchRandomQuote = async () => {
     setIsLoading(true)
 
-    // Simulate loading
-    setTimeout(() => {
-      const randomIndex = Math.floor(Math.random() * quotes.length)
-      setCurrentQuote(quotes[randomIndex])
+    try {
+      const result = await getRandomQuote()
+
+      if (result.quote) {
+        setQuote(result.quote)
+        // Check if we're using a fallback quote (they have IDs starting with "fallback-")
+        setIsUsingFallback(result.quote._id.startsWith("fallback-"))
+      }
+    } catch (err) {
+      console.error("Error in client:", err)
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
+  }
+
+  // Fetch a quote when the component mounts
+  useEffect(() => {
+    fetchRandomQuote()
+  }, [])
+
+  // Generate a placeholder image URL based on the author's name
+  const getAuthorImageUrl = (author: string) => {
+    // Encode the author name for use in URL
+    const encodedName = encodeURIComponent(author)
+    // Return a placeholder image with the author's name
+    return `https://ui-avatars.com/api/?name=${encodedName}&size=400&background=random`
   }
 
   return (
@@ -82,37 +53,72 @@ export default function QuoteGenerator() {
 
       <Card className="w-full max-w-3xl mx-auto overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
         <CardContent className="p-0">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="relative h-64 md:h-full min-h-[300px] bg-slate-200">
-              <Image
-                src={currentQuote.image || "/placeholder.svg"}
-                alt={currentQuote.author}
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-            <div className="flex flex-col justify-center p-6 md:p-8">
-              <div className="mb-4">
-                <Quote className="h-8 w-8 text-slate-400 mb-2" />
-                <p className="text-xl md:text-2xl font-serif italic mb-6">{currentQuote.text}</p>
-                <p className="text-right font-semibold text-lg">— {currentQuote.author}</p>
+          {isLoading ? (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="relative h-64 md:h-full min-h-[300px] bg-slate-200 animate-pulse"></div>
+              <div className="flex flex-col justify-center p-6 md:p-8">
+                <div className="space-y-4">
+                  <div className="h-6 bg-slate-200 rounded animate-pulse"></div>
+                  <div className="h-6 bg-slate-200 rounded animate-pulse"></div>
+                  <div className="h-6 bg-slate-200 rounded animate-pulse"></div>
+                  <div className="h-4 bg-slate-200 rounded w-1/2 ml-auto animate-pulse"></div>
+                </div>
               </div>
-              <Button onClick={generateRandomQuote} className="mt-4 w-full" disabled={isLoading}>
-                {isLoading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                Generate New Quote
+            </div>
+          ) : quote ? (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="relative h-64 md:h-full min-h-[300px] bg-slate-200">
+                <Image
+                  src={getAuthorImageUrl(quote.author) || "/placeholder.svg"}
+                  alt={quote.author}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              <div className="flex flex-col justify-center p-6 md:p-8">
+                <div className="mb-4">
+                  <Quote className="h-8 w-8 text-slate-400 mb-2" />
+                  <p className="text-xl md:text-2xl font-serif italic mb-6">{quote.content}</p>
+                  <p className="text-right font-semibold text-lg">— {quote.author}</p>
+                </div>
+                <Button onClick={fetchRandomQuote} className="mt-4 w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Generate New Quote
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <p>No quote available. Please try again.</p>
+              <Button onClick={fetchRandomQuote} className="mt-4">
+                Try Again
               </Button>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
       <footer className="mt-12 text-center text-slate-500 text-sm">
-        <p>Click the button to generate a new random quote from a public figure.</p>
+        {isUsingFallback ? (
+          <p>Using local quotes database (API connection unavailable)</p>
+        ) : (
+          <p>
+            Quotes provided by{" "}
+            <a
+              href="https://github.com/lukePeavey/quotable"
+              className="underline hover:text-slate-700"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Quotable API
+            </a>
+          </p>
+        )}
       </footer>
     </div>
   )
