@@ -17,13 +17,12 @@ export async function getRandomQuote(): Promise<{ quote: QuoteData | null; error
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
 
-    const response = await fetch("https://api.quotable.io/random", {
-      cache: "no-store",
-      signal: controller.signal,
-    }).catch((err) => {
-      console.log("Fetch error:", err.message)
-      return null
-    })
+const response = await fetch('https://api.api-ninjas.com/v1/quotes', {
+  method: 'GET',
+  headers: { 'X-Api-Key': 'zaZn6a56lXkegEJoUpYZuA==KfDyX6vyR3w04EaI' },
+  signal: controller.signal,
+});
+
 
     clearTimeout(timeoutId)
 
